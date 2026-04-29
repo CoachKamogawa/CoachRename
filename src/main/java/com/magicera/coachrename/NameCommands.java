@@ -4,7 +4,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 public final class NameCommands implements CommandExecutor {
@@ -48,6 +47,13 @@ public final class NameCommands implements CommandExecutor {
 
         if (args.length == 0) {
             player.sendMessage(plugin.prefix() + "Use §e/nick <nickname>");
+            return true;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("off")) {
+            nicknameManager.clearNickname(player.getUniqueId());
+            nameplateManager.refreshAll();
+            player.sendMessage(plugin.prefix() + "Your nickname has been turned off.");
             return true;
         }
 
