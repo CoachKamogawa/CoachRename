@@ -9,12 +9,12 @@ import java.util.UUID;
 
 public final class NameCommands implements CommandExecutor {
 
-    private final MagicEraNamesPlugin plugin;
+    private final CoachRenamePlugin plugin;
     private final NicknameManager nicknameManager;
     private final NameplateManager nameplateManager;
 
     public NameCommands(
-            MagicEraNamesPlugin plugin,
+            CoachRenamePlugin plugin,
             NicknameManager nicknameManager,
             NameplateManager nameplateManager
     ) {
