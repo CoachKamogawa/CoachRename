@@ -19,7 +19,7 @@ public final class NameplateManager implements Listener {
 
     private static final String HIDDEN_TEAM = "menames_hidden";
 
-    private final MagicEraNamesPlugin plugin;
+    private final CoachRenamePlugin plugin;
     private final NicknameManager nicknameManager;
 
     private final Map<NameplateKey, TextDisplay> displays = new HashMap<>();
@@ -28,7 +28,7 @@ public final class NameplateManager implements Listener {
 
     private BukkitTask task;
 
-    public NameplateManager(MagicEraNamesPlugin plugin, NicknameManager nicknameManager) {
+    public NameplateManager(CoachRenamePlugin plugin, NicknameManager nicknameManager) {
         this.plugin = plugin;
         this.nicknameManager = nicknameManager;
     }
