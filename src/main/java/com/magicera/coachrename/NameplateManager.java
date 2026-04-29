@@ -173,8 +173,6 @@ public final class NameplateManager implements Listener {
                 }
         );
 
-        display.setPassenger(false);
-
         target.addPassenger(display);
 
         display.setTransformation(new org.bukkit.util.Transformation(
