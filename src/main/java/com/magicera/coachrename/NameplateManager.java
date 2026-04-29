@@ -1,4 +1,4 @@
-package com.magicera.names;
+package com.magicera.coachrename;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
