@@ -1,5 +1,7 @@
 aliases:
   nick:
-  - magiceranames:nick $1-
   - -essentials.nick
   - -essentials.nick.others
+  - coachrename:nick $1-
+  nickname:
+  - coachrename:nick $1-
