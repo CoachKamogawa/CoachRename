@@ -9,6 +9,7 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -17,7 +18,7 @@ import java.util.*;
 
 public final class NameplateManager implements Listener {
 
-    private static final String HIDDEN_TEAM = "menames_hidden";
+    private static final String HIDDEN_TEAM = "crename_hidden";
 
     private final CoachRenamePlugin plugin;
     private final NicknameManager nicknameManager;
@@ -37,7 +38,6 @@ public final class NameplateManager implements Listener {
         setupHiddenNameTeam();
 
         long updateTicks = plugin.getConfig().getLong("nameplate.update-ticks", 2L);
-
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, updateTicks);
     }
 
@@ -109,30 +109,54 @@ public final class NameplateManager implements Listener {
     private void updatePair(Player viewer, Player target) {
         NameplateKey key = new NameplateKey(viewer.getUniqueId(), target.getUniqueId());
 
-        if (!viewer.getWorld().equals(target.getWorld())) {
+        if (!shouldShowNameplate(viewer, target)) {
             removeDisplay(key);
             return;
         }
 
         TextDisplay display = displays.get(key);
 
-        if (display == null || display.isDead()) {
+        if (display == null || display.isDead() || !target.getPassengers().contains(display)) {
             display = spawnDisplayFor(viewer, target);
             displays.put(key, display);
         }
 
-        double yOffset = plugin.getConfig().getDouble("nameplate.y-offset", 2.35);
-        Location location = target.getLocation().clone().add(0, yOffset, 0);
-
-        display.teleport(location);
         display.text(Component.text(getVisibleName(viewer, target), NamedTextColor.WHITE));
+
+        viewer.showEntity(plugin, display);
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.equals(viewer)) {
+                online.hideEntity(plugin, display);
+            }
+        }
+    }
+
+    private boolean shouldShowNameplate(Player viewer, Player target) {
+        if (!viewer.getWorld().equals(target.getWorld())) {
+            return false;
+        }
+
+        if (!viewer.canSee(target)) {
+            return false;
+        }
+
+        if (target.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+            return false;
+        }
+
+        if (target.isInvisible()) {
+            return false;
+        }
+
+        return true;
     }
 
     private TextDisplay spawnDisplayFor(Player viewer, Player target) {
         double yOffset = plugin.getConfig().getDouble("nameplate.y-offset", 2.35);
 
         TextDisplay display = target.getWorld().spawn(
-                target.getLocation().clone().add(0, yOffset, 0),
+                target.getLocation(),
                 TextDisplay.class,
                 entity -> {
                     entity.setPersistent(false);
@@ -143,9 +167,22 @@ public final class NameplateManager implements Listener {
                     entity.setSeeThrough(false);
                     entity.setDefaultBackground(false);
                     entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+                    entity.setTeleportDuration(1);
+                    entity.setTransformation(entity.getTransformation());
                     entity.text(Component.text(getVisibleName(viewer, target), NamedTextColor.WHITE));
                 }
         );
+
+        display.setPassenger(false);
+
+        target.addPassenger(display);
+
+        display.setTransformation(new org.bukkit.util.Transformation(
+                new org.joml.Vector3f(0.0F, (float) yOffset, 0.0F),
+                new org.joml.AxisAngle4f(),
+                new org.joml.Vector3f(1.0F, 1.0F, 1.0F),
+                new org.joml.AxisAngle4f()
+        ));
 
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.equals(viewer)) {
@@ -223,18 +260,22 @@ public final class NameplateManager implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         UUID leaving = event.getPlayer().getUniqueId();
 
-        displays.keySet().removeIf(key -> {
-            boolean remove = key.viewerId().equals(leaving) || key.targetId().equals(leaving);
+        Iterator<Map.Entry<NameplateKey, TextDisplay>> iterator = displays.entrySet().iterator();
 
-            if (remove) {
-                TextDisplay display = displays.get(key);
+        while (iterator.hasNext()) {
+            Map.Entry<NameplateKey, TextDisplay> entry = iterator.next();
+            NameplateKey key = entry.getKey();
+
+            if (key.viewerId().equals(leaving) || key.targetId().equals(leaving)) {
+                TextDisplay display = entry.getValue();
+
                 if (display != null && !display.isDead()) {
                     display.remove();
                 }
-            }
 
-            return remove;
-        });
+                iterator.remove();
+            }
+        }
 
         globalTrueNameRevealUntil.remove(leaving);
         specificTrueNameRevealUntil.keySet().removeIf(key ->
