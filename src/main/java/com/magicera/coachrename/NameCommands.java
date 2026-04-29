@@ -1,4 +1,4 @@
-package com.magicera.names;
+package com.magicera.coachrename;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.*;
