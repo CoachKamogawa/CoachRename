@@ -1,4 +1,4 @@
-package com.magicera.names;
+package com.magicera.coachrename;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
