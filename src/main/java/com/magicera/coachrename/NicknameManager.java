@@ -11,7 +11,7 @@ import java.util.*;
 
 public final class NicknameManager {
 
-    private final MagicEraNamesPlugin plugin;
+    private final CoachRenamePlugin plugin;
     private final File file;
 
     private YamlConfiguration data;
@@ -20,7 +20,7 @@ public final class NicknameManager {
     private final Map<String, UUID> rawNicknameIndex = new HashMap<>();
     private final Map<String, UUID> knownUsernameIndex = new HashMap<>();
 
-    public NicknameManager(MagicEraNamesPlugin plugin) {
+    public NicknameManager(CoachRenamePlugin plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "nicknames.yml");
     }
