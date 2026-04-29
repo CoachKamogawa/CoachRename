@@ -7,12 +7,15 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.*;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -47,24 +50,12 @@ public final class NameplateManager implements Listener {
             task = null;
         }
 
-        for (TextDisplay display : displays.values()) {
-            if (display != null && !display.isDead()) {
-                display.remove();
-            }
-        }
-
-        displays.clear();
+        removeAllDisplays();
     }
 
     public void refreshAll() {
-        for (TextDisplay display : displays.values()) {
-            if (display != null && !display.isDead()) {
-                display.remove();
-            }
-        }
-
-        displays.clear();
-        tick();
+        removeAllDisplays();
+        Bukkit.getScheduler().runTaskLater(plugin, this::tick, 2L);
     }
 
     public void revealAllTrueNames(Player viewer, int seconds) {
@@ -117,12 +108,12 @@ public final class NameplateManager implements Listener {
         TextDisplay display = displays.get(key);
 
         if (display == null || display.isDead() || !target.getPassengers().contains(display)) {
+            removeDisplay(key);
             display = spawnDisplayFor(viewer, target);
             displays.put(key, display);
         }
 
         display.text(Component.text(getVisibleName(viewer, target), NamedTextColor.WHITE));
-
         viewer.showEntity(plugin, display);
 
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -133,6 +124,14 @@ public final class NameplateManager implements Listener {
     }
 
     private boolean shouldShowNameplate(Player viewer, Player target) {
+        if (!viewer.isOnline() || !target.isOnline()) {
+            return false;
+        }
+
+        if (target.isDead()) {
+            return false;
+        }
+
         if (!viewer.getWorld().equals(target.getWorld())) {
             return false;
         }
@@ -145,15 +144,11 @@ public final class NameplateManager implements Listener {
             return false;
         }
 
-        if (target.isInvisible()) {
-            return false;
-        }
-
-        return true;
+        return !target.isInvisible();
     }
 
     private TextDisplay spawnDisplayFor(Player viewer, Player target) {
-        double yOffset = plugin.getConfig().getDouble("nameplate.y-offset", 2.35);
+        double yOffset = plugin.getConfig().getDouble("nameplate.y-offset", 0.6);
 
         TextDisplay display = target.getWorld().spawn(
                 target.getLocation(),
@@ -167,20 +162,17 @@ public final class NameplateManager implements Listener {
                     entity.setSeeThrough(false);
                     entity.setDefaultBackground(false);
                     entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
-                    entity.setTeleportDuration(1);
-                    entity.setTransformation(entity.getTransformation());
                     entity.text(Component.text(getVisibleName(viewer, target), NamedTextColor.WHITE));
+                    entity.setTransformation(new Transformation(
+                            new Vector3f(0.0F, (float) yOffset, 0.0F),
+                            new AxisAngle4f(),
+                            new Vector3f(1.0F, 1.0F, 1.0F),
+                            new AxisAngle4f()
+                    ));
                 }
         );
 
         target.addPassenger(display);
-
-        display.setTransformation(new org.bukkit.util.Transformation(
-                new org.joml.Vector3f(0.0F, (float) yOffset, 0.0F),
-                new org.joml.AxisAngle4f(),
-                new org.joml.Vector3f(1.0F, 1.0F, 1.0F),
-                new org.joml.AxisAngle4f()
-        ));
 
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.equals(viewer)) {
@@ -217,6 +209,35 @@ public final class NameplateManager implements Listener {
         specificTrueNameRevealUntil.entrySet().removeIf(entry -> entry.getValue() <= now);
     }
 
+    private void removeAllDisplays() {
+        for (TextDisplay display : displays.values()) {
+            if (display != null && !display.isDead()) {
+                display.remove();
+            }
+        }
+
+        displays.clear();
+    }
+
+    private void removeDisplaysForPlayer(UUID playerId) {
+        Iterator<Map.Entry<NameplateKey, TextDisplay>> iterator = displays.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<NameplateKey, TextDisplay> entry = iterator.next();
+            NameplateKey key = entry.getKey();
+
+            if (key.viewerId().equals(playerId) || key.targetId().equals(playerId)) {
+                TextDisplay display = entry.getValue();
+
+                if (display != null && !display.isDead()) {
+                    display.remove();
+                }
+
+                iterator.remove();
+            }
+        }
+    }
+
     private void removeDisplay(NameplateKey key) {
         TextDisplay display = displays.remove(key);
 
@@ -244,41 +265,57 @@ public final class NameplateManager implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        Player joined = event.getPlayer();
+        UUID playerId = event.getPlayer().getUniqueId();
 
-        for (TextDisplay display : displays.values()) {
-            joined.hideEntity(plugin, display);
-        }
-
+        removeDisplaysForPlayer(playerId);
         setupHiddenNameTeam();
+
         Bukkit.getScheduler().runTaskLater(plugin, this::refreshAll, 10L);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        UUID leaving = event.getPlayer().getUniqueId();
+        UUID playerId = event.getPlayer().getUniqueId();
 
-        Iterator<Map.Entry<NameplateKey, TextDisplay>> iterator = displays.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<NameplateKey, TextDisplay> entry = iterator.next();
-            NameplateKey key = entry.getKey();
-
-            if (key.viewerId().equals(leaving) || key.targetId().equals(leaving)) {
-                TextDisplay display = entry.getValue();
-
-                if (display != null && !display.isDead()) {
-                    display.remove();
-                }
-
-                iterator.remove();
-            }
-        }
-
-        globalTrueNameRevealUntil.remove(leaving);
+        removeDisplaysForPlayer(playerId);
+        globalTrueNameRevealUntil.remove(playerId);
         specificTrueNameRevealUntil.keySet().removeIf(key ->
-                key.viewerId().equals(leaving) || key.targetId().equals(leaving)
+                key.viewerId().equals(playerId) || key.targetId().equals(playerId)
         );
+    }
+
+    @EventHandler
+    public void onTeleport(PlayerTeleportEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+
+        removeDisplaysForPlayer(playerId);
+
+        Bukkit.getScheduler().runTaskLater(plugin, this::tick, 3L);
+    }
+
+    @EventHandler
+    public void onChangedWorld(PlayerChangedWorldEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+
+        removeDisplaysForPlayer(playerId);
+
+        Bukkit.getScheduler().runTaskLater(plugin, this::tick, 3L);
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        UUID playerId = event.getEntity().getUniqueId();
+
+        removeDisplaysForPlayer(playerId);
+    }
+
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+
+        removeDisplaysForPlayer(playerId);
+
+        Bukkit.getScheduler().runTaskLater(plugin, this::tick, 10L);
     }
 
     private record NameplateKey(UUID viewerId, UUID targetId) {
