@@ -101,7 +101,7 @@ public final class NameCommands implements CommandExecutor {
             return true;
         }
 
-        int seconds = plugin.getConfig().getInt("truename.reveal-seconds", 60);
+        int seconds = plugin.getConfig().getInt("truename.reveal-seconds", 30);
 
         if (args.length == 0) {
             nameplateManager.revealAllTrueNames(viewer, seconds);
