@@ -39,6 +39,10 @@ public final class CoachRenamePlugin extends JavaPlugin {
         }
     }
 
+    public NicknameManager nicknameManager() {
+        return nicknameManager;
+    }
+
     public String prefix() {
         return getConfig().getString("prefix", "§7[§dCoach Rename§7] ");
     }
