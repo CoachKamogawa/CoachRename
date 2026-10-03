@@ -13,6 +13,7 @@ java {
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'net.essentialsx:EssentialsX:2.21.0'
 }
 
 tasks.withType(JavaCompile).configureEach {
