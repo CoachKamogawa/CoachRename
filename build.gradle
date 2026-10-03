@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.magicera.names'
-version = '1.0.0'
+version = '1.0.1'
 
 java {
     toolchain {
@@ -16,6 +16,7 @@ dependencies {
 
     compileOnly('net.essentialsx:EssentialsX:2.21.0') {
         exclude group: 'org.spigotmc', module: 'spigot-api'
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
