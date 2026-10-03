@@ -1,13 +1,16 @@
 name: CoachRename
-version: 1.0.0
+version: 1.0.1
 main: com.magicera.coachrename.CoachRenamePlugin
 api-version: '1.21'
 author: Coach
+
+depend: [Essentials, EssentialsChat, LuckPerms, Vault]
 
 commands:
   nick:
     description: Set your nickname
     usage: /nick <nickname>
+    aliases: [nickname]
 
   nickclear:
     description: Clear your nickname
