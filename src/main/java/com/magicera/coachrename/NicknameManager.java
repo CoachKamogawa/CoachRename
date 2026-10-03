@@ -134,6 +134,7 @@ public final class NicknameManager {
         rawNicknameIndex.put(raw, uuid);
 
         save();
+        plugin.syncNickname(uuid);
         return NicknameResult.success(record);
     }
 
@@ -145,6 +146,7 @@ public final class NicknameManager {
         }
 
         save();
+        plugin.syncNickname(uuid);
     }
 
     public NicknameRecord getRecord(UUID uuid) {
